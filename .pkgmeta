@@ -1,0 +1,7 @@
+package-as: Adherent
+enable-nolib-creation: no
+
+ignore:
+  - .gitignore
+  - .pkgmeta
+  - README.md
