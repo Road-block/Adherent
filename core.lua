@@ -286,7 +286,7 @@ function adherent:options()
     self._options.args.general.args.settings.args["tooltip"] = {
       type = "toggle",
       name = L["Player Tooltip Hint"],
-      desc = format(L["Indicate other %s Users with icon after Player names"], addonName),
+      desc = format(L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"], addonName, (LDBO.icon or 666623)),
       order = 15,
       get = function() return adherent.db.char.tooltip end,
       set = function(info, val)
@@ -1244,7 +1244,7 @@ function adherent:informDecline(name, action, data)
   elseif data == "notbusy" then
     reason = L["Not when busy"]
   end
-  local msg = format(L["<%s>:\'%s\' option prevents me from obliging."],addonName,reason)
+  local msg = format(L["<%s> can't comply due to a \'%s\' option :)"],addonName,reason)
   SendChatMessage(msg, "WHISPER", nil, name)
 end
 
@@ -1474,6 +1474,8 @@ function adherent:remoteDiscovery(name)
   local is_known = self.db.profile.adherents[name]
   if not is_known then
     self:ping(name)
+  else
+    self:pong(name)
   end
 end
 
@@ -1481,12 +1483,18 @@ function adherent:updateKnown(name, version, remove)
   local knownAdherents = self.db.profile.adherents
   if not knownAdherents[name] then
     knownAdherents[name] = true
+    if self.db.char.echo then
+      self:debugPrint(format(L["Discovered <%s>"],name))
+    end
   end
   if version then
     knownAdherents[name] = version
   end
   if remove then
     knownAdherents[name] = nil
+    if self.db.char.echo then
+      self:debugPrint(format(L["Removing <%s> from known"],name))
+    end
   end
 end
 
@@ -1548,8 +1556,8 @@ function adherent:OnCommReceived(prefix, msg, distro, sender)
       self:updateKnown(sender,what)
       self:pong(sender)
     elseif who == "PONG" then
-      self:updateKnown(sender,what)
       pongReceived[sender] = true
+      self:updateKnown(sender,what)
     elseif who == "AFK" then
       self:updateKnown(sender)
     end
@@ -1561,7 +1569,12 @@ end
 -------------------------------------------
 
 function adherent:FRIENDLIST_UPDATE()
-  if self:inCombat() then return end
+  if self._pendingFLU then self._pendingFLU = nil end
+  if self:inCombat() then
+    self._pendingFLU = true
+    self:RegisterEvent("PLAYER_REGEN_ENABLED")
+    return
+  end
   local numFriends = C_FriendList.GetNumFriends()
   if numFriends <= 0 then return end
   local roster = self.db.char.friends
@@ -1593,7 +1606,13 @@ function adherent:PLAYER_GUILD_UPDATE(event, ...)
 end
 
 function adherent:GUILD_ROSTER_UPDATE()
-  if (GuildFrame and GuildFrame:IsShown()) or self:inCombat() then
+  if self._pendingGRU then self._pendingGRU = nil end
+  local incombat = self:inCombat()
+  if (GuildFrame and GuildFrame:IsShown()) or incombat then
+    if incombat then
+      self._pendingGRU = true
+      self:RegisterEvent("PLAYER_REGEN_ENABLED")
+    end
     return
   end
   local guildname = GetGuildInfo("player")
@@ -1673,6 +1692,16 @@ function adherent:PLAYER_FLAGS_CHANGED(event, unit)
       end
     end
     self._playerAFK = afk
+  end
+end
+
+function adherent:PLAYER_REGEN_ENABLED()
+  self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+  if self._pendingFLU then
+    self:FRIENDLIST_UPDATE()
+  end
+  if self._pendingGRU then
+    self:ScheduleTimer("GUILD_ROSTER_UPDATE", 2)
   end
 end
 

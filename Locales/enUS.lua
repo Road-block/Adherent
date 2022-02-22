@@ -19,7 +19,7 @@ if not L then return end
   L["%s will not automate when you are in Combat"] = true
   L["Not in Instances"] = true
   L["%s will not automate when you are in an Instance"] = true
-  L["<%s>:\'%s\' option prevents me from obliging."] = true
+  L["<%s> can't comply due to a \'%s\' option :)"] = true
   L["Echo %s actions"] = true
   L["Print %s actions to your chatframe"] = true
   L["Blizzard Options"] = true
@@ -69,9 +69,11 @@ if not L then return end
   L["Only react to |cffffff00custom|r keywords (ignore |cffdcdcdcdefaults|r)"] = true
   L["Auto accept Group Invites from.."] = true
   L["Player Tooltip Hint"] = true
-  L["Indicate other %s Users with icon after Player names"] = true
+  L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"] = true
   L["Quick Settings"] = true
   L["[Suspended]"] = true
+  L["Discovered <%s>"] = true
+  L["Removing <%s> from known"] = true
   L.DEFAULT_KEYWORDS = [[• Start Follow: |cffdcdcdc!fme|r%s
 • Stop Following: |cffdcdcdc!fno|r%s
 ]]
