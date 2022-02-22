@@ -9,7 +9,7 @@
 ## SavedVariables: AdherentDB
 
 ## X-Curse-Project-ID: 582180
-## X-WoWI-ID:
+## X-WoWI-ID: 26239
 
 Libs\libs.xml
 Locales\locales.xml
