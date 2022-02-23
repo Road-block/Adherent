@@ -111,6 +111,14 @@ local cmd = {
       end,
       order = 1,
     },
+    options = {
+      type = "execute",
+      name = _G.OPTIONS,
+      func = function()
+        adherent:showOptions()
+      end,
+      order = 2,
+    }
   }
 }
 
@@ -1075,10 +1083,12 @@ function adherent:OnEnable() -- 2. PLAYER_LOGIN
 
   self:defaultKWHash()
   self:optionsKWHash()
+  self:Print(C:Green(L["[Enabled]"]))
 end
 
 function adherent:OnDisable() -- ADHOC
   self.db.char.suspend = true
+  self:Print(C:Red(L["[Suspended]"]))
 end
 
 function adherent:RefreshConfig()
@@ -1560,6 +1570,15 @@ function adherent:OnCommReceived(prefix, msg, distro, sender)
       self:updateKnown(sender,what)
     elseif who == "AFK" then
       self:updateKnown(sender)
+      if self.db.char.echo then
+        local status
+        if data then
+          status = data=="1" and L["went AFK"] or L["returned from AFK"]
+          if status and what then
+            self:debugPrint(format(L["%s %s at %s"],sender, status, what))
+          end
+        end
+      end
     end
   end
 end
@@ -1625,8 +1644,8 @@ function adherent:GUILD_ROSTER_UPDATE()
   end
   for i=1, GetNumGuildMembers() do
     local name,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,guid = GetGuildRosterInfo(i)
-    name = Ambiguate(name, "short") --"mail" = always name-realm, "short" = always just name
-    if name ~= _G.UNKNOWNOBJECT then
+    if name and name ~= _G.UNKNOWNOBJECT then
+      name = Ambiguate(name, "short") --"mail" = always name-realm, "short" = always just name
       roster[name] = guid or true
     end
   end

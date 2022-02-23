@@ -72,8 +72,12 @@ if not L then return end
   L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"] = true
   L["Quick Settings"] = true
   L["[Suspended]"] = true
+  L["[Enabled]"] = true
   L["Discovered <%s>"] = true
   L["Removing <%s> from known"] = true
+  L["went AFK"] = true
+  L["returned from AFK"] = true
+  L["%s %s at %s"] = true
   L.DEFAULT_KEYWORDS = [[• Start Follow: |cffdcdcdc!fme|r%s
 • Stop Following: |cffdcdcdc!fno|r%s
 ]]
