@@ -26,7 +26,7 @@ if not L then return end
   L["Left Click"] = true
   L["Right Click"] = true
   L["Defaults"] = true
-  L["|cffff0000Warning!|r\nThis action will wipe all user options and revert to defaults."] = true
+  L["|T357854:16|tWarning!|T357854:16|t\nThis action will wipe ALL addon data."] = true
   L["Auto follow Options"] = true
   L["Auto group"] = true
   L["Auto group Join Options"] = true
@@ -34,7 +34,6 @@ if not L then return end
   L["Auto group Invite Options"] = true
   L["Suspend %s"] = true
   L["Suspend all auto accept actions."] = true
-  L["|cffff7f00Right Click|r | %s."] = true
   L["Who?"] = true
   L["Who can put you on follow."] = true
   L["Anyone"] = true

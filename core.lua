@@ -22,6 +22,7 @@ local special_frames = {}
 local alreadyPinged, alreadyPonged, pongReceived = {}, {}, {}
 local InviteToGroup = _G.InviteToGroup or C_PartyInfo.InviteUnit
 local CanGroupInvite = _G.CanGroupInvite or C_PartyInfo.CanInvite
+local GuildRoster = _G.GuildRoster or C_GuildInfo.GuildRoster
 local COMM_PREFIX = format("%s_PFX",addonName)
 
 local default_keywords = {
@@ -320,7 +321,7 @@ function adherent:options()
     self._options.args.general.args.settings.args["defaults"] = {
       type = "execute",
       name = _G.RESET_TO_DEFAULT,
-      desc = L["|cffff0000Warning!|r\nThis action will wipe all user options and revert to defaults."],
+      desc = L["|T357854:16|tWarning!|T357854:16|t\nThis action will wipe ALL addon data."],
       func = "resetToDefaults",
       order = 20,
     }
@@ -1114,7 +1115,6 @@ function adherent:deferredInit(guildname)
     self._initdone = true
   else
     local profilekey = realmname
-    local profilekey = realmname
     self._options.name = self._labelfull
     self._options.args.general.name = panelHeader
     self.db:SetProfile(profilekey)
@@ -1260,15 +1260,15 @@ end
 
 local function takeAction(action, name)
   if adherent.db.char.notcombat and adherent:inCombat() then
-    self:informDecline(name, action, "notcombat")
+    adherent:informDecline(name, action, "notcombat")
     return
   end
   if adherent.db.char.notinstance and adherent:inInstance() then
-    self:informDecline(name, action, "notinstance")
+    adherent:informDecline(name, action, "notinstance")
     return
   end
   if adherent.db.char.notbusy and adherent:busy() then
-    self:informDecline(name, action, "notbusy")
+    adherent:informDecline(name, action, "notbusy")
     return
   end
   if action == "follow" then
@@ -1388,7 +1388,7 @@ function adherent:blacklistAdd(unit, list)
   local blacklist = self.db.char[list].blacklist
   local whitelist = self.db.char[list].whitelist
   local name = GetUnitName(unit)
-  if not name or name == _G.UNKNOWNOBJECT then
+  if not name or name == _G.UNKNOWNOBJECT or name == "" then
     name = unit
   end
   local suffix = ""
@@ -1411,7 +1411,7 @@ function adherent:whitelistAdd(unit, list)
   local whitelist = self.db.char[list].whitelist
   local blacklist = self.db.char[list].blacklist
   local name = GetUnitName(unit)
-  if not name or name == _G.UNKNOWNOBJECT then
+  if not name or name == _G.UNKNOWNOBJECT or name == "" then
     name = unit
   end
   if blacklist[name] then
@@ -1435,7 +1435,7 @@ end
 
 function adherent:resetToDefaults()
   -- wipe custom lists and reset all options to defaults
-
+  self.db:ResetDB()
 end
 
 function adherent:inMyGroup(unit)
@@ -1450,9 +1450,10 @@ end
 function adherent:busy()
   local _, _, _, _, _, tradeskillChannel = UnitChannelInfo("player")
   local _, _, _, _, _, tradeskillCast = UnitCastingInfo("player")
-  local crafting = (TradeSkillFrame and TradeSkillFrame:IsVisible()) or (CraftFrame and CraftFrame:IsVisible())
+  local crafting = (_G.TradeSkillFrame and _G.TradeSkillFrame:IsVisible()) or (_G.CraftFrame and _G.CraftFrame:IsVisible())
   local interacting = UnitName("npc")
-  if interacting or crafting or tradeskillChannel or tradeskillCast then
+  local dnd = UnitIsDND("player")
+  if interacting or crafting or tradeskillChannel or tradeskillCast or dnd then
     return true
   end
   return false
@@ -1463,7 +1464,7 @@ function adherent:inCombat()
 end
 
 function adherent:inInstance()
-  inst, insType = IsInInstance()
+  local inst, insType = IsInInstance()
   return inst and (insType == "raid" or insType == "party")
 end
 
@@ -1603,7 +1604,7 @@ function adherent:FRIENDLIST_UPDATE()
   local serverQuery = false
   for i=1, numFriends do
     local info = C_FriendList.GetFriendInfoByIndex(i)
-    if info and info.name and info.name ~= _G.UNKNOWNOBJECT then
+    if info and info.name and not (info.name == _G.UNKNOWNOBJECT or info.name == "") then
       roster[info.name] = info.guid or true
     else -- request for new data
       serverQuery = true
@@ -1627,7 +1628,7 @@ end
 function adherent:GUILD_ROSTER_UPDATE()
   if self._pendingGRU then self._pendingGRU = nil end
   local incombat = self:inCombat()
-  if (GuildFrame and GuildFrame:IsShown()) or incombat then
+  if (_G.GuildFrame and _G.GuildFrame:IsShown()) or incombat then
     if incombat then
       self._pendingGRU = true
       self:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -1644,7 +1645,7 @@ function adherent:GUILD_ROSTER_UPDATE()
   end
   for i=1, GetNumGuildMembers() do
     local name,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,guid = GetGuildRosterInfo(i)
-    if name and name ~= _G.UNKNOWNOBJECT then
+    if name and not (name == _G.UNKNOWNOBJECT or name == "") then
       name = Ambiguate(name, "short") --"mail" = always name-realm, "short" = always just name
       roster[name] = guid or true
     end
