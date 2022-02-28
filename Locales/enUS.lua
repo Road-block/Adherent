@@ -19,7 +19,7 @@ if not L then return end
   L["%s will not automate when you are in Combat"] = true
   L["Not in Instances"] = true
   L["%s will not automate when you are in an Instance"] = true
-  L["<%s> can't comply due to a \'%s\' option :)"] = true
+  L["Can't comply due to \'%s\' option"] = true
   L["Echo %s actions"] = true
   L["Print %s actions to your chatframe"] = true
   L["Blizzard Options"] = true
@@ -69,6 +69,8 @@ if not L then return end
   L["Auto accept Group Invites from.."] = true
   L["Player Tooltip Hint"] = true
   L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"] = true
+  L["Inform Initiator"] = true
+  L["Send a tell to action initiator when accepting or declining"] = true
   L["Quick Settings"] = true
   L["[Suspended]"] = true
   L["[Enabled]"] = true
@@ -77,12 +79,28 @@ if not L then return end
   L["went AFK"] = true
   L["returned from AFK"] = true
   L["%s %s at %s"] = true
+  L["<%s> says %s"] = true
+  L["Starter only"] = true
+  L["Stop Follow"] = true
+  L["Only stop if request comes from follow Starter"] = true
+  L["Request to stop following by %s"] = true
+  L["Accepting invite from %s. They are %s :)"] = true
+  L["Sending invite to %s."] = true
+  L["whitelist"] = "trusted"
+  L["friend"] = "a friend"
+  L["guild"] = "a guildie"
+  L["follow"] = "I am following you. Lead the way :)"
+  L["followstop"] = "I am no longer following :||"
+  L["ERR_UNIT_NOT_FOUND"] = "Can't follow you. Not visible."
+  L["ERR_AUTOFOLLOW_TOO_FAR"] = "Can't follow you until you come closer."
+  L["ERR_INVALID_FOLLOW_TARGET"] = "Can't follow that unit."
+  L["ERR_TOOBUSYTOFOLLOW"] = "Can't follow. Too Busy."
+  L.FOLLOWSTOP_DETAIL = [[Normally any category of player that's allowed to start a follow can also stop one.
+Check this if you want only the specific player that started a follow to be able to stop it.]]
   L.DEFAULT_KEYWORDS = [[• Start Follow: |cffdcdcdc!fme|r%s
-• Stop Following: |cffdcdcdc!fno|r%s
-]]
+• Stop Following: |cffdcdcdc!fno|r%s]]
   L.DEFAULT_EMOTES = [[• Start Follow: |cffff8c00/%sme|r or |cffff8c00/%s|r
-• Stop Following: |cffff8c00/%s|r or |cffff8c00/%s|r
-]]
+• Stop Following: |cffff8c00/%s|r or |cffff8c00/%s|r]]
   L.USAGE = [[|cff00ff00Adherent|r
 Define rules for auto-accepting requests for Follow, Group Join or Group Invite.
 

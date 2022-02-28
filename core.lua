@@ -4,7 +4,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(addonName)
 local AC = LibStub("AceConfig-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local ADBO = LibStub("AceDBOptions-3.0")
-local LDBO = LibStub("LibDataBroker-1.1"):NewDataObject(addonName)
+local LDB = LibStub("LibDataBroker-1.1"):NewDataObject(addonName)
 local LDI = LibStub("LibDBIcon-1.0")
 local C = LibStub("LibCrayon-3.0")
 local DF = LibStub("LibDeformat-3.0")
@@ -31,9 +31,9 @@ local default_keywords = {
   groupsend = {"!invme"},
 }
 local default_emotes = {
-  follow = {L[EMOTE163_TOKEN], L[EMOTE7_TOKEN]}, -- /followme /beckon
+  follow =     {L[EMOTE163_TOKEN], L[EMOTE7_TOKEN]},   -- /followme /beckon
   followstop = {L[EMOTE164_TOKEN], L[EMOTE130_TOKEN]}, -- /wait /shoo
-  groupsend = {L[EMOTE382_TOKEN], L[EMOTE112_TOKEN]}, -- /arm /cuddle
+  groupsend =  {L[EMOTE382_TOKEN], L[EMOTE112_TOKEN]}, -- /arm /cuddle
 }
 local defaults = {
   profile = {
@@ -43,6 +43,7 @@ local defaults = {
   char = {
     suspend = false,
     echo = false,
+    inform = true,
     tooltip = true,
     notbusy = false,
     notinstance = false,
@@ -53,6 +54,7 @@ local defaults = {
       guild = true,
       group = false,
       all = false,
+      whostarted = false,
       blacklist = {},
       whitelist = {},
       keywords = {
@@ -227,7 +229,7 @@ function adherent:options()
       type = "description",
       fontSize = "medium",
       image = function()
-        return LDBO.icon or 666623 -- "Interface\\COMMON\\friendship-FistHuman"
+        return LDB.icon or 666623 -- "Interface\\COMMON\\friendship-FistHuman"
       end,
       name = L.USAGE,
       order = 5,
@@ -292,11 +294,21 @@ function adherent:options()
         adherent.db.char.echo = val
       end,
     }
+    self._options.args.general.args.settings.args["inform"] = {
+      type = "toggle",
+      name = L["Inform Initiator"],
+      desc = L["Send a tell to action initiator when accepting or declining"],
+      order = 15,
+      get = function() return adherent.db.char.inform end,
+      set = function(info, val)
+        adherent.db.char.inform = val
+      end,
+    }
     self._options.args.general.args.settings.args["tooltip"] = {
       type = "toggle",
       name = L["Player Tooltip Hint"],
-      desc = format(L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"], addonName, (LDBO.icon or 666623)),
-      order = 15,
+      desc = format(L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"], addonName, (LDB.icon or 666623)),
+      order = 16,
       get = function() return adherent.db.char.tooltip end,
       set = function(info, val)
         adherent.db.char.tooltip = val
@@ -307,7 +319,7 @@ function adherent:options()
       type = "toggle",
       name = L["Hide from Minimap"],
       desc = L["Hide addon Minimap Button."],
-      order = 16,
+      order = 17,
       get = function() return adherent.db.char.minimap.hide end,
       set = function(info, val)
         adherent.db.char.minimap.hide = val
@@ -433,6 +445,31 @@ function adherent:options()
         return adherent:table_count(adherent.db.char.follow.keywords.followstop) == 0
       end,
     }
+    acceptfollow_args.who.args["followstop"] = {
+      type = "group",
+      name = L["Stop Follow"],
+      order = 1,
+      inline = false,
+      args = {
+        whostarteddesc = {
+          type = "description",
+          name = C:Silver(L.FOLLOWSTOP_DETAIL),
+          order = 1,
+          width = "full",
+        },
+        whostarted = {
+          type = "toggle",
+          name = L["Starter only"],
+          order = 2,
+          get = function(info, val)
+            return adherent.db.char.follow.whostarted
+          end,
+          set = function(info, val)
+            adherent.db.char.follow.whostarted = val
+          end
+        }
+      }
+    }
     acceptfollow_args.who.args["friend"] = {
       type = "toggle",
       name = _G.FRIEND,
@@ -489,7 +526,7 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklistAdd(val,"follow")
+        adherent:blacklist(val,"follow","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -505,7 +542,7 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent.db.char.follow.blacklist[val] = nil
+        adherent:blacklist(val,"follow","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.follow.blacklist) == 0
@@ -531,7 +568,7 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelistAdd(val,"follow")
+        adherent:whitelist(val,"follow","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -547,7 +584,7 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent.db.char.follow.whitelist[val] = nil
+        adherent:whitelist(val,"follow","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.follow.whitelist) == 0
@@ -576,7 +613,6 @@ function adherent:options()
       end,
       set = function(info, val)
         adherent.db.char.follow.TEXT_EMOTE = val
-        adherent:optionUpdated("follow", "emote")
       end,
     }
     acceptfollow_args.where.args["descemotes"] = {
@@ -599,7 +635,6 @@ function adherent:options()
         if key == "PARTY" or key == "RAID" then
           adherent.db.char.follow.chat[key.."_LEADER"] = val
         end
-        adherent:optionUpdated("follow", "where")
       end,
       values = {
         PARTY = _G.PARTY,
@@ -654,7 +689,7 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklistAdd(val,"groupjoin")
+        adherent:blacklist(val,"groupjoin","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -670,7 +705,7 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent.db.char.groupjoin.blacklist[val] = nil
+        adherent:blacklist(val,"groupjoin","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupjoin.blacklist) == 0
@@ -696,7 +731,7 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelistAdd(val,"groupjoin")
+        adherent:whitelist(val,"groupjoin","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -712,7 +747,7 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent.db.char.groupjoin.whitelist[val] = nil
+        adherent:whitelist(val,"groupjoin","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupjoin.whitelist) == 0
@@ -832,7 +867,7 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklistAdd(val,"groupsend")
+        adherent:blacklist(val,"groupsend","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -848,7 +883,7 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent.db.char.groupsend.blacklist[val] = nil
+        adherent:blacklist(val,"groupsend","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupsend.blacklist) == 0
@@ -874,7 +909,7 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelistAdd(val,"groupsend")
+        adherent:whitelist(val,"groupsend","+")
       end,
       validate = function(info, val)
         -- check characters >=2<=12
@@ -890,7 +925,7 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent.db.char.groupsend.whitelist[val] = nil
+        adherent:whitelist(val,"groupsend","-")
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupsend.whitelist) == 0
@@ -919,7 +954,6 @@ function adherent:options()
       end,
       set = function(info, val)
         adherent.db.char.groupsend.TEXT_EMOTE = val
-        adherent:optionUpdated("groupsend", "emote")
       end,
     }
     sendgroup_args.where.args["descemotes"] = {
@@ -939,7 +973,6 @@ function adherent:options()
       end,
       set = function(info, key, val)
         adherent.db.char.groupsend.chat[key] = val
-        adherent:optionUpdated("groupsend", "where")
       end,
       values = {
         SAY = _G.SAY,
@@ -1001,13 +1034,17 @@ function adherent.CreateTooltip(parent, data)
   adherent.qtip:SetCell(line, 1, format("|T%s:12:12:0:0|t %s",texture,C:Cyan(L["Not when busy"])), nil, "CENTER", 0)
   adherent.qtip:SetLineScript(line, "OnMouseUp", adherent.QuickSettings, {parent=parent, option="notbusy"})
   line = adherent.qtip:AddLine()
-  local texture = adherent.db.char.notcombat and 136814 or 136813
+  texture = adherent.db.char.notcombat and 136814 or 136813
   adherent.qtip:SetCell(line, 1, format("|T%s:12:12:0:0|t %s",texture,C:Cyan(L["Not in Combat"])), nil, "CENTER", 0)
   adherent.qtip:SetLineScript(line, "OnMouseUp", adherent.QuickSettings, {parent=parent, option="notcombat"})
   line = adherent.qtip:AddLine()
   texture = adherent.db.char.notinstance and 136814 or 136813
   adherent.qtip:SetCell(line, 1, format("|T%s:12:12:0:0|t %s",texture,C:Cyan(L["Not in Instances"])), nil, "CENTER", 0)
   adherent.qtip:SetLineScript(line, "OnMouseUp", adherent.QuickSettings, {parent=parent, option="notinstance"})
+  line = adherent.qtip:AddLine()
+  texture = adherent.db.char.inform and 136814 or 136813
+  adherent.qtip:SetCell(line, 1, format("|T%s:12:12:0:0|t %s",texture,C:Cyan(L["Inform Initiator"])), nil, "CENTER", 0)
+  adherent.qtip:SetLineScript(line, "OnMouseUp", adherent.QuickSettings, {parent=parent, option="inform"})
 
   adherent.qtip:AddSeparator(4,0,0,0,0)
   line = adherent.qtip:AddLine()
@@ -1038,13 +1075,13 @@ function adherent:OnInitialize() -- 1. ADDON_LOADED
 
   self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
   self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
-  LDBO.type = "launcher"
-  LDBO.text = label
-  LDBO.label = label -- string.format("%s %s",addonName,self._versionString)
-  LDBO.icon = 666623 -- "Interface\\COMMON\\friendship-FistHuman" -- UI-GuildButton-MOTD-Disabled
-  LDBO.OnClick = adherent.OnLDBClick
-  LDBO.OnEnter = adherent.CreateTooltip
-  LDI:Register(addonName, LDBO, adherent.db.char.minimap)
+  LDB.type = "launcher"
+  LDB.text = label
+  LDB.label = label -- string.format("%s %s",addonName,self._versionString)
+  LDB.icon = 666623 -- "Interface\\COMMON\\friendship-FistHuman" -- UI-GuildButton-MOTD-Disabled
+  LDB.OnClick = adherent.OnLDBClick
+  LDB.OnEnter = adherent.CreateTooltip
+  LDI:Register(addonName, LDB, adherent.db.char.minimap)
 end
 
 function adherent:OnEnable() -- 2. PLAYER_LOGIN
@@ -1061,9 +1098,9 @@ function adherent:OnEnable() -- 2. PLAYER_LOGIN
   end
   local faction = UnitFactionGroup("player")
   if faction == "Horde" then
-    LDBO.icon = 666624 -- "Interface\\COMMON\\friendship-FistOrc" -- 666624
+    LDB.icon = 666624 -- "Interface\\COMMON\\friendship-FistOrc" -- 666624
   else
-    LDBO.icon = 666623 -- "Interface\\COMMON\\friendship-FistHuman" -- 666623
+    LDB.icon = 666623 -- "Interface\\COMMON\\friendship-FistHuman" -- 666623
   end
   self._bucketFriendRoster = self:RegisterBucketEvent("FRIENDLIST_UPDATE",5.0)
   self:FRIENDLIST_UPDATE()
@@ -1128,7 +1165,7 @@ function adherent:showOptions()
     self:ScheduleTimer("ScrollToCategory",1,addonName,1)
     self:ScheduleTimer(function()
       InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
-    end,2)
+    end,1)
 end
 
 function adherent:debugPrint(msg,onlyWhenDebug)
@@ -1245,47 +1282,78 @@ function adherent:optionsKWHash()
   end
 end
 
-function adherent:informDecline(name, action, data)
-  local reason = ""
-  if data == "notcombat" then
-    reason = L["Not in Combat"]
-  elseif data == "notinstance" then
-    reason = L["Not in Instances"]
-  elseif data == "notbusy" then
-    reason = L["Not when busy"]
+function adherent:inform(name, msg, action, ...)
+  if not self.db.char.inform then return end
+  if msg and action then
+    msg = format(msg,action,...)
   end
-  local msg = format(L["<%s> can't comply due to a \'%s\' option :)"],addonName,reason)
-  SendChatMessage(msg, "WHISPER", nil, name)
+  if not msg and action then
+    -- construct msg from action
+  end
+  if msg and #msg > 0 then
+    msg = format(L["<%s> says %s"],addonName,msg)
+    SendChatMessage(msg,"WHISPER",nil,name)
+  end
+end
+
+function adherent:echo(msg, action, ...)
+  if not self.db.char.echo then return end
+  if msg and action then
+    msg = format(msg,action,...)
+  end
+  if not msg and action then
+    -- construct msg from action
+  end
+  if msg and #msg > 0 then
+    self:debugPrint(msg)
+  end
+end
+
+function adherent:follow(unit)
+  FollowUnit(unit, true)
+end
+
+function adherent:followstop(name)
+  local started_by_adherent = self._lastLeader
+  local rq_from_starter = name == started_by_adherent
+  if rq_from_starter or not adherent.db.char.follow.whostarted then
+    FollowUnit("player")
+    adherent._lastLeader = nil
+    self:echo(L["Request to stop following by %s"],name)
+  else
+    self:inform(name,L["Can't comply due to \'%s\' option"],L["Starter only"])
+  end
 end
 
 local function takeAction(action, name)
-  if adherent.db.char.notcombat and adherent:inCombat() then
-    adherent:informDecline(name, action, "notcombat")
+  if adherent.db.char.notcombat and adherent:combat() then
+    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not in Combat"])
     return
   end
-  if adherent.db.char.notinstance and adherent:inInstance() then
-    adherent:informDecline(name, action, "notinstance")
+  if adherent.db.char.notinstance and adherent:instance() then
+    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not in Instances"])
     return
   end
   if adherent.db.char.notbusy and adherent:busy() then
-    adherent:informDecline(name, action, "notbusy")
+    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not when busy"])
     return
   end
   if action == "follow" then
     adherent:RegisterEvent("UI_ERROR_MESSAGE")
-    adherent._lastName = name
-    FollowUnit(name, true)
+    adherent._lastBidder = name
+    adherent:RegisterEvent("AUTOFOLLOW_BEGIN")
+    adherent:ScheduleTimer("follow", 0.2, name)
   elseif action == "followstop" then
-    FollowUnit("player")
-    adherent._lastName = nil
+    adherent:followstop(name)
   elseif action == "groupsend" then
     if CanGroupInvite() then
+      adherent:echo(L["Sending invite to %s."], name)
       InviteToGroup(name)
     end
   end
 end
 
-function adherent:Action(action, sender, chatType)
+function adherent:Dispatch(action, sender, chatType)
   self:remoteDiscovery(sender)
   local list = action
   if action == "followstop" then
@@ -1310,7 +1378,7 @@ function adherent:Action(action, sender, chatType)
       listening = self.db.char.follow.chat[chatType]
     end
     if listening then
-      if self.db.char.follow.all or (self.db.char.follow.guild and is_guild) or (self.db.char.follow.friend and is_friend) or (self.db.char.follow.group and self:inMyGroup(sender)) then
+      if self.db.char.follow.all or (self.db.char.follow.guild and is_guild) or (self.db.char.follow.friend and is_friend) or (self.db.char.follow.group and self:group(sender)) then
         takeAction(action, sender)
         return
       end
@@ -1379,58 +1447,59 @@ function adherent:addTipHint(tooltip)
     if UnitIsPlayer(unit) and is_known then
       local old = _G[tipName.."TextLeft1"]:GetText() or ""
       local h = _G[tipName.."TextLeft1"]:GetLineHeight()+4
-      _G[tipName.."TextLeft1"]:SetFormattedText("%s|T%s:%d|t",old,LDBO.icon,h)
+      _G[tipName.."TextLeft1"]:SetFormattedText("%s|T%s:%d|t",old,LDB.icon,h)
     end
   end
 end
 
-function adherent:blacklistAdd(unit, list)
-  local blacklist = self.db.char[list].blacklist
-  local whitelist = self.db.char[list].whitelist
-  local name = GetUnitName(unit)
-  if not name or name == _G.UNKNOWNOBJECT or name == "" then
-    name = unit
+function adherent:blacklist(unit, list, action)
+  if not unit or unit == "" then return end
+  local blacklist, whitelist, name
+  if action == "+" then
+    blacklist = self.db.char[list].blacklist
+    whitelist = self.db.char[list].whitelist
+    name = GetUnitName(unit)
+    if not name or (name == _G.UNKNOWNOBJECT) or (name == "") then
+      name = unit
+    end
+    if whitelist[name] then
+      whitelist[name] = nil
+    end
+    if not blacklist[name] then
+      blacklist[name] = name
+    end
   end
-  local suffix = ""
-  if whitelist[name] then
-    whitelist[name] = nil
-  end
-  if not blacklist[name] then
-    blacklist[name] = name
-  end
-end
-
-function adherent:blacklistRemove(name, list)
-  local blacklist = self.db.char[list].blacklist
-  if blacklist[name] then
-    blacklist[name] = nil
-  end
-end
-
-function adherent:whitelistAdd(unit, list)
-  local whitelist = self.db.char[list].whitelist
-  local blacklist = self.db.char[list].blacklist
-  local name = GetUnitName(unit)
-  if not name or name == _G.UNKNOWNOBJECT or name == "" then
-    name = unit
-  end
-  if blacklist[name] then
-    blacklist[name] = nil
-  end
-  if not whitelist[name] then
-    whitelist[name] = name
+  if action == "-" then
+    blacklist = self.db.char[list].blacklist
+    if blacklist[unit] then
+      blacklist[unit] = nil
+    end
   end
 end
 
-function adherent:whitelistRemove(name, list)
-  local whitelist = self.db.char[list].whitelist
-  if whitelist[name] then
-    whitelist[name] = nil
+function adherent:whitelist(unit,list,action)
+  if not unit or unit == "" then return end
+  local whitelist,blacklist,name
+  if action == "+" then
+    whitelist = self.db.char[list].whitelist
+    blacklist = self.db.char[list].blacklist
+    name = GetUnitName(unit)
+    if not name or (name == _G.UNKNOWNOBJECT) or (name == "") then
+      name = unit
+    end
+    if blacklist[name] then
+      blacklist[name] = nil
+    end
+    if not whitelist[name] then
+      whitelist[name] = name
+    end
   end
-end
-
-function adherent:optionUpdated(option, ...)
-  -- depending on option passed, in update event registrations, caches etc
+  if action == "-" then
+    whitelist = self.db.char[list].whitelist
+    if whitelist[unit] then
+      whitelist[unit] = nil
+    end
+  end
 end
 
 function adherent:resetToDefaults()
@@ -1438,7 +1507,7 @@ function adherent:resetToDefaults()
   self.db:ResetDB()
 end
 
-function adherent:inMyGroup(unit)
+function adherent:group(unit)
   if not unit then return false end
   if not IsInGroup() then
     return false
@@ -1459,21 +1528,22 @@ function adherent:busy()
   return false
 end
 
-function adherent:inCombat()
+function adherent:combat()
   return UnitAffectingCombat("player")
 end
 
-function adherent:inInstance()
+function adherent:instance()
   local inst, insType = IsInInstance()
   return inst and (insType == "raid" or insType == "party")
 end
 
 local function acceptGroup(reason, sender)
   if adherent.db.char.notbusy and adherent:busy() then
-    adherent:informDecline(sender,"groupjoin","notbusy")
+    adherent:inform(sender,L["Can't comply due to \'%s\' option"],L["Not when busy"])
     return
   end
   AcceptGroup()
+  adherent:echo(L["Accepting invite from %s. They are %s :)"], sender, L[reason])
   local dialog = StaticPopup_FindVisible("PARTY_INVITE")
   if dialog then
     --StaticPopup_Hide("PARTY_INVITE")
@@ -1490,28 +1560,24 @@ function adherent:remoteDiscovery(name)
   end
 end
 
-function adherent:updateKnown(name, version, remove)
+function adherent:updateKnown(name, version, action)
   local knownAdherents = self.db.profile.adherents
   if not knownAdherents[name] then
     knownAdherents[name] = true
-    if self.db.char.echo then
-      self:debugPrint(format(L["Discovered <%s>"],name))
-    end
+    self:echo(L["Discovered <%s>"],name)
   end
   if version then
     knownAdherents[name] = version
   end
-  if remove then
+  if action and action == "-" then
     knownAdherents[name] = nil
-    if self.db.char.echo then
-      self:debugPrint(format(L["Removing <%s> from known"],name))
-    end
+    self:echo(L["Removing <%s> from known"],name)
   end
 end
 
 function adherent:checkPong(name)
   if not pongReceived[name] and self.db.profile.adherents[name] then
-    self:updateKnown(name,nil,true) -- remove them from known
+    self:updateKnown(name,nil,"-") -- remove them from known
   end
 end
 
@@ -1587,10 +1653,9 @@ end
 -------------------------------------------
 --// EVENTS
 -------------------------------------------
-
 function adherent:FRIENDLIST_UPDATE()
   if self._pendingFLU then self._pendingFLU = nil end
-  if self:inCombat() then
+  if self:combat() then
     self._pendingFLU = true
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     return
@@ -1627,7 +1692,7 @@ end
 
 function adherent:GUILD_ROSTER_UPDATE()
   if self._pendingGRU then self._pendingGRU = nil end
-  local incombat = self:inCombat()
+  local incombat = self:combat()
   if (_G.GuildFrame and _G.GuildFrame:IsShown()) or incombat then
     if incombat then
       self._pendingGRU = true
@@ -1665,7 +1730,7 @@ function adherent:CHAT_MSG_EVENT(event, ...)
     action = self:parseChat(msg)
   end
   if not action then return end
-  self:Action(action, sender, chatType)
+  self:Dispatch(action, sender, chatType)
 end
 
 function adherent:PARTY_INVITE_REQUEST(event, sender)
@@ -1684,12 +1749,12 @@ function adherent:PARTY_INVITE_REQUEST(event, sender)
     acceptGroup("whitelist",sender)
     return
   end
-  if is_guild and self.db.char.groupjoin.guild then
-    acceptGroup("guild",sender)
-    return
-  end
   if is_friend and self.db.char.groupjoin.friend then
     acceptGroup("friend",sender)
+    return
+  end
+  if is_guild and self.db.char.groupjoin.guild then
+    acceptGroup("guild",sender)
     return
   end
 end
@@ -1726,29 +1791,41 @@ function adherent:PLAYER_REGEN_ENABLED()
 end
 
 function adherent:AUTOFOLLOW_BEGIN(event, who)
-  self._lastName = who
+  self._lastBidder = nil
+  self._lastLeader = nil
+  self:UnregisterEvent("AUTOFOLLOW_BEGIN")
+  self:RegisterEvent("AUTOFOLLOW_END")
+  who = Ambiguate(who, "short")
+  self:echo(_G.AUTOFOLLOWSTART, who)
+  self:inform(who,L["follow"])
+  self._lastLeader = who
 end
 
 function adherent:AUTOFOLLOW_END()
-  -- send and wipe
-  self._lastName = nil
+  self:UnregisterEvent("AUTOFOLLOW_END")
+  if self._lastLeader then
+    self:inform(self._lastLeader, L["followstop"])
+  end
+  self._lastLeader = nil
 end
 
 function adherent:UI_ERROR_MESSAGE(event, error_code, error_text)
-  local msg
-  if error_code == LE_GAME_ERR_UNIT_NOT_FOUND then
-    self._lastName = nil
-    msg = "I can't follow you. Maybe not grouped? Try inviting."
-  elseif error_code == LE_GAME_ERR_AUTOFOLLOW_TOO_FAR then
-    self._lastName = nil
-    msg = "I can't follow you. You are too far :)"
-  elseif error_code == LE_GAME_ERR_INVALID_FOLLOW_TARGET then
-    self._lastName = nil
-    msg = "I can't follow that unit."
-  elseif error_code == LE_GAME_ERR_TOOBUSYTOFOLLOW then
-    self._lastName = nil
-    msg = "I can't follow you right now. Busy."
+  if self._lastBidder then
+    local msg
+    if error_code == LE_GAME_ERR_UNIT_NOT_FOUND then
+      msg = L["ERR_UNIT_NOT_FOUND"]
+    elseif error_code == LE_GAME_ERR_AUTOFOLLOW_TOO_FAR then
+      msg = L["ERR_AUTOFOLLOW_TOO_FAR"]
+    elseif error_code == LE_GAME_ERR_INVALID_FOLLOW_TARGET then
+      msg = L["ERR_INVALID_FOLLOW_TARGET"]
+    elseif error_code == LE_GAME_ERR_TOOBUSYTOFOLLOW then
+      msg = L["ERR_TOOBUSYTOFOLLOW"]
+    end
+    if msg then
+      self:inform(self._lastBidder,msg)
+    end
   end
+  self._lastBidder = nil
   self:UnregisterEvent("UI_ERROR_MESSAGE")
 end
 
