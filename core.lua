@@ -121,6 +121,33 @@ local cmd = {
         adherent:showOptions()
       end,
       order = 2,
+    },
+    known = {
+      type = "input",
+      name = L["Known"],
+      desc = L["Print discovered Adherents.\nUse a partial name to limit results"],
+      get = function() end,
+      set = function(info, val)
+        local filter = val and #(val:gsub("%s",""))>0 and val or ".+"
+        for k,v in pairs(adherent.db.profile.adherents) do
+          if k:find(filter) then
+            adherent:debugPrint(format("%s v%s",k,v))
+          end
+        end
+      end,
+      order = 3,
+    },
+    greet = {
+      type = "input",
+      name = L["Greet"],
+      desc = L["Send a backchannel greeting to a player to discover if they have an Adherent"],
+      get = function() end,
+      set = function(info, val)
+        local name = adherent:GetSlashCmdTarget(val)
+        if name and adherent:validName(info, name) then
+          adherent:ping(name)
+        end
+      end,
     }
   }
 }
@@ -526,15 +553,11 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklist(val,"follow","+")
+        if val~="" then
+          adherent:blacklist(val,"follow","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     acceptfollow_args.who.args["blacklistrem"] = {
       type = "select",
@@ -542,7 +565,9 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent:blacklist(val,"follow","-")
+        if val~="" then
+          adherent:blacklist(val,"follow","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.follow.blacklist) == 0
@@ -568,15 +593,11 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelist(val,"follow","+")
+        if val~="" then
+          adherent:whitelist(val,"follow","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     acceptfollow_args.who.args["whitelistrem"] = {
       type = "select",
@@ -584,7 +605,9 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent:whitelist(val,"follow","-")
+        if val~="" then
+          adherent:whitelist(val,"follow","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.follow.whitelist) == 0
@@ -689,15 +712,11 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklist(val,"groupjoin","+")
+        if val~="" then
+          adherent:blacklist(val,"groupjoin","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     acceptgroup_args.who.args["blacklistrem"] = {
       type = "select",
@@ -705,7 +724,9 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent:blacklist(val,"groupjoin","-")
+        if val~="" then
+          adherent:blacklist(val,"groupjoin","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupjoin.blacklist) == 0
@@ -731,15 +752,11 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelist(val,"groupjoin","+")
+        if val~="" then
+          adherent:whitelist(val,"groupjoin","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     acceptgroup_args.who.args["whitelistrem"] = {
       type = "select",
@@ -747,7 +764,9 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent:whitelist(val,"groupjoin","-")
+        if val~="" then
+          adherent:whitelist(val,"groupjoin","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupjoin.whitelist) == 0
@@ -867,15 +886,11 @@ function adherent:options()
       order = 25,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:blacklist(val,"groupsend","+")
+        if val~="" then
+          adherent:blacklist(val,"groupsend","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     sendgroup_args.who.args["blacklistrem"] = {
       type = "select",
@@ -883,7 +898,9 @@ function adherent:options()
       desc = L["Remove a player from Blacklist."],
       order = 30,
       set = function(info, val)
-        adherent:blacklist(val,"groupsend","-")
+        if val~="" then
+          adherent:blacklist(val,"groupsend","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupsend.blacklist) == 0
@@ -909,15 +926,11 @@ function adherent:options()
       order = 40,
       get = function(info) return "" end,
       set = function(info, val)
-        adherent:whitelist(val,"groupsend","+")
+        if val~="" then
+          adherent:whitelist(val,"groupsend","+")
+        end
       end,
-      validate = function(info, val)
-        -- check characters >=2<=12
-        -- check no spaces
-        -- check no double apostrophes
-        -- check no numbers
-        return true
-      end,
+      validate = "validName",
     }
     sendgroup_args.who.args["whitelistrem"] = {
       type = "select",
@@ -925,7 +938,9 @@ function adherent:options()
       desc = L["Remove a player from Whitelist."],
       order = 45,
       set = function(info, val)
-        adherent:whitelist(val,"groupsend","-")
+        if val~="" then
+          adherent:whitelist(val,"groupsend","-")
+        end
       end,
       disabled = function(info)
         return adherent:table_count(adherent.db.char.groupsend.whitelist) == 0
@@ -1097,7 +1112,7 @@ function adherent:OnEnable() -- 2. PLAYER_LOGIN
     self:ScheduleTimer("deferredInit",5)
   end
   local faction = UnitFactionGroup("player")
-  if faction == "Horde" then
+  if faction == PLAYER_FACTION_GROUP[0] then -- horde
     LDB.icon = 666624 -- "Interface\\COMMON\\friendship-FistOrc" -- 666624
   else
     LDB.icon = 666623 -- "Interface\\COMMON\\friendship-FistHuman" -- 666623
@@ -1852,6 +1867,45 @@ function adherent:table_val_array(t)
     tinsert(out, v)
   end
   return out
+end
+
+function adherent:GetSlashCmdTarget(msg)
+  msg = msg or ""
+  local target, server
+  target = gsub(msg, "(%s*)(.*[^%s]+)(%s*)", "%2", 1)
+  if ( target == "" ) then
+    if ( UnitIsPlayer("target") ) then
+      target = "target"
+    else
+      target = nil
+    end
+  end
+  if ( target and (target == "player" or target == "target" or
+       strfind(target, "^party[1-4]") or
+     strfind(target, "^raid[0-9]")) ) then
+    target,server = UnitName(target)
+  end
+  return target,server
+end
+
+function adherent:validName(info,val)
+  -- check characters >=2<=12
+  -- check no spaces
+  -- check no double apostrophes
+  -- check no numbers
+  local len = string.utf8len or string.len
+  local err_msg = L["Not a valid player name: %s"]
+  local name_len = len(val)
+  if name_len == 0 then return true end -- let them exit the input if they clear the text
+  local valid_len = name_len and name_len > 1 and name_len < 13
+  if not valid_len then return format(err_msg,L["Length"]) end
+  local _, num_blanks = val:gsub("%s","")
+  if num_blanks > 0 then return format(err_msg,L["Spaces"]) end
+  local _, num_doubleapos = val:gsub("\'\'","")
+  if num_doubleapos > 0 then return format(err_msg,L["Double Apostrophes"]) end
+  local _, num_nums = val:gsub("%d","")
+  if num_nums > 0 then return format(err_msg,L["Numbers"]) end
+  return true
 end
 
 function adherent:Capitalize(word)

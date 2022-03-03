@@ -76,6 +76,15 @@ if not L then return end
   L["[Enabled]"] = true
   L["Discovered <%s>"] = true
   L["Removing <%s> from known"] = true
+  L["Known"] = true
+  L["Print discovered Adherents.\nUse a partial name to limit results"] = true
+  L["Greet"] = true
+  L["Send a backchannel greeting to a player to discover if they have an Adherent"] = true
+  L["Not a valid player name: %s"] = true
+  L["Length"] = true
+  L["Spaces"] = true
+  L["Numbers"] = true
+  L["Double Apostrophes"] = true
   L["went AFK"] = true
   L["returned from AFK"] = true
   L["%s %s at %s"] = true
