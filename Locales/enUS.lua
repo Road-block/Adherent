@@ -14,11 +14,11 @@ if not L then return end
   L["Hide from Minimap"] = true
   L["Hide addon Minimap Button."] = true
   L["Not when busy"] = true
-  L["%s will not interrupt Trade/Mail/Auction/Bank/Professions"] = true
+  L["%s will not interrupt Trade/Mail/Auction/Bank/Professions/Queues"] = true
   L["Not in Combat"] = true
   L["%s will not automate when you are in Combat"] = true
   L["Not in Instances"] = true
-  L["%s will not automate when you are in an Instance"] = true
+  L["%s will not automate when you are in a PvE Instance"] = true
   L["Can't comply due to \'%s\' option"] = true
   L["Echo %s actions"] = true
   L["Print %s actions to your chatframe"] = true
@@ -63,10 +63,10 @@ if not L then return end
   L["Remove keywords from Custom Keywords"] = true
   L["Keywords monitored by %s"] = true
   L["Who can command %s?"] = true
-  L["%s will listen to.."] = true
+  L["%s will listen to"] = true
   L["Only Custom"] = true
   L["Only react to |cffffff00custom|r keywords (ignore |cffdcdcdcdefaults|r)"] = true
-  L["Auto accept Group Invites from.."] = true
+  L["Auto accept Group Invites from"] = true
   L["Player Tooltip Hint"] = true
   L["Indicate known %s in player tooltips with an icon after their Name|T%s:15|t"] = true
   L["Inform Initiator"] = true

@@ -185,7 +185,7 @@ function adherent:options()
                 },
                 where = {
                   type = "group",
-                  name = format(L["%s will listen to.."],addonName),
+                  name = format(L["%s will listen to"],addonName),
                   inline = true,
                   order = 2,
                   args = { },
@@ -207,7 +207,7 @@ function adherent:options()
               args = {
                 who = {
                   type = "group",
-                  name = L["Auto accept Group Invites from.."],
+                  name = L["Auto accept Group Invites from"],
                   inline = true,
                   order = 1,
                   args = { },
@@ -229,7 +229,7 @@ function adherent:options()
                 },
                 where = {
                   type = "group",
-                  name = format(L["%s will listen to.."],addonName),
+                  name = format(L["%s will listen to"],addonName),
                   inline = true,
                   order = 2,
                   args = { },
@@ -294,7 +294,7 @@ function adherent:options()
     self._options.args.general.args.settings.args["notinstance"] = {
       type = "toggle",
       name = L["Not in Instances"],
-      desc = format(L["%s will not automate when you are in an Instance"], addonName),
+      desc = format(L["%s will not automate when you are in a PvE Instance"], addonName),
       order = 12,
       get = function() return adherent.db.char.notinstance end,
       set = function(info, val)
@@ -304,7 +304,7 @@ function adherent:options()
     self._options.args.general.args.settings.args["notbusy"] = {
       type = "toggle",
       name = L["Not when busy"],
-      desc = format(L["%s will not interrupt Trade/Mail/Auction/Bank/Professions"], addonName),
+      desc = format(L["%s will not interrupt Trade/Mail/Auction/Bank/Professions/Queues"], addonName),
       order = 13,
       get = function() return adherent.db.char.notbusy end,
       set = function(info, val)
@@ -1176,11 +1176,16 @@ function adherent:deferredInit(guildname)
 end
 
 function adherent:showOptions()
+  --[[InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
+  self:ScheduleTimer("ScrollToCategory",1,addonName,1)
+  self:ScheduleTimer(function()
     InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
-    self:ScheduleTimer("ScrollToCategory",1,addonName,1)
-    self:ScheduleTimer(function()
-      InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
-    end,1)
+  end,1)]]
+  if ACD.OpenFrames[addonName] then
+    ACD:Close(addonName)
+  else
+    ACD:Open(addonName,"general")
+  end
 end
 
 function adherent:debugPrint(msg,onlyWhenDebug)
@@ -1531,13 +1536,27 @@ function adherent:group(unit)
   end
 end
 
+local bg_queued = function()
+  for i=1, MAX_BATTLEFIELD_QUEUES do
+    local status = GetBattlefieldStatus(i)
+    if status and (status == "queued" or status == "confirm") then
+      return true
+    end
+  end
+  return false
+end
 function adherent:busy()
   local _, _, _, _, _, tradeskillChannel = UnitChannelInfo("player")
   local _, _, _, _, _, tradeskillCast = UnitCastingInfo("player")
   local crafting = (_G.TradeSkillFrame and _G.TradeSkillFrame:IsVisible()) or (_G.CraftFrame and _G.CraftFrame:IsVisible())
+  local professions = crafting or tradeskillChannel or tradeskillCast
   local interacting = UnitName("npc")
+  local lfgqueue = _G.C_LFGList and _G.C_LFGList.HasActiveEntryInfo()
+  local bgqueue = bg_queued()
+  local in_queue = lfgqueue or bgqueue
+  local wouldleave = _G.WillAcceptInviteRemoveQueues()
   local dnd = UnitIsDND("player")
-  if interacting or crafting or tradeskillChannel or tradeskillCast or dnd then
+  if interacting or professions or in_queue or wouldleave or dnd then
     return true
   end
   return false
