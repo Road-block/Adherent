@@ -11,8 +11,12 @@ local DF = LibStub("LibDeformat-3.0")
 local T = LibStub("LibQTip-1.0")
 
 adherent._DEBUG = false
+local _,_,_,tocNum = GetBuildInfo()
+tocNum = tonumber(tocNum)
+adherent._wrath = tocNum < 40000 and tocNum > 30000 -- temp until we get a wrath project id
 adherent._classic = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_CLASSIC) or false
 adherent._bcc = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC) or false
+adherent._bcc = adherent._bcc and not adherent._wrath -- temp until we get a wrath project id
 adherent._playerName = GetUnitName("player")
 adherent._playerFullName = adherent._playerName
 
@@ -22,6 +26,7 @@ local special_frames = {}
 local alreadyPinged, alreadyPonged, pongReceived = {}, {}, {}
 local InviteToGroup = _G.InviteToGroup or C_PartyInfo.InviteUnit
 local CanGroupInvite = _G.CanGroupInvite or C_PartyInfo.CanInvite
+local ConvertToRaid = _G.ConvertToRaid or C_PartyInfo.ConvertToRaid
 local GuildRoster = _G.GuildRoster or C_GuildInfo.GuildRoster
 local COMM_PREFIX = format("%s_PFX",addonName)
 
@@ -82,6 +87,7 @@ local defaults = {
     groupsend = {
       friend = true,
       guild = true,
+      autoraid = false,
       blacklist = {},
       whitelist = {},
       keywords = {},
@@ -994,6 +1000,18 @@ function adherent:options()
         WHISPER = _G.WHISPER,
       },
     }
+    sendgroup_args.where.args["autoraid"] = {
+      type = "toggle",
+      name = _G.CONVERT_TO_RAID,
+      desc = L["Automatically convert to raid when party full."],
+      order = 12,
+      get = function(info, val)
+        return adherent.db.char.groupsend.autoraid
+      end,
+      set = function(info, val)
+        adherent.db.char.groupsend.autoraid = val
+      end,
+    }
   end
   return self._options
 end
@@ -1367,9 +1385,22 @@ local function takeAction(action, name)
     adherent:followstop(name)
   elseif action == "groupsend" then
     if CanGroupInvite() then
-      adherent:echo(L["Sending invite to %s."], name)
-      InviteToGroup(name)
+      adherent:groupinvite(name)
     end
+  end
+end
+
+function adherent:groupinvite(name)
+  local autoconvert = self.db.char.groupsend.autoraid
+  local numGroup = GetNumGroupMembers()
+  local shouldConvert = (numGroup > MAX_PARTY_MEMBERS) and (not IsInRaid()) and UnitIsGroupLeader("player")
+  if shouldConvert and autoconvert then
+    ConvertToRaid()
+    self:ScheduleTimer("groupinvite",1,name)
+    return
+  else
+    InviteToGroup(name)
+    adherent:echo(L["Sending invite to %s."], name)
   end
 end
 

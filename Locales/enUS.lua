@@ -95,6 +95,8 @@ if not L then return end
   L["Request to stop following by %s"] = true
   L["Accepting invite from %s. They are %s :)"] = true
   L["Sending invite to %s."] = true
+  L["Automatically convert to raid when party full."] = true
+  L["Raid Convert"] = true
   L["whitelist"] = "trusted"
   L["friend"] = "a friend"
   L["guild"] = "a guildie"
