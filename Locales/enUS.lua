@@ -100,6 +100,7 @@ if not L then return end
   L["whitelist"] = "trusted"
   L["friend"] = "a friend"
   L["guild"] = "a guildie"
+  L["all"] = "unrestricted (all)"
   L["follow"] = "I am following you. Lead the way :)"
   L["followstop"] = "I am no longer following :||"
   L["ERR_UNIT_NOT_FOUND"] = "Can't follow you. Not visible."

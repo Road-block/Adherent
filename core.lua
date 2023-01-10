@@ -1814,6 +1814,10 @@ function adherent:PARTY_INVITE_REQUEST(event, sender)
     acceptGroup("whitelist",sender)
     return
   end
+  if self.db.char.groupjoin.all then
+    acceptGroup("all",sender)
+    return
+  end
   if is_friend and self.db.char.groupjoin.friend then
     acceptGroup("friend",sender)
     return
