@@ -1,8 +1,8 @@
-## Interface: 30400
+## Interface: 40401
 ## Author: Roadblock
 ## Title: Adherent
 ## Notes: Adherent lets you define rules for auto accepting follow, group join and group invite requests.
-## Version: 1.1.4
+## Version: 1.1.5
 ## X-Alpha: 
 ## X-Website: https://github.com/Road-block/Adherent/releases/latest
 ## OptionalDeps: Ace3

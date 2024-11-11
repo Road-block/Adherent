@@ -19,7 +19,7 @@ if not L then return end
   L["%s will not automate when you are in Combat"] = true
   L["Not in Instances"] = true
   L["%s will not automate when you are in a PvE Instance"] = true
-  L["Can't comply due to \'%s\' option"] = true
+  L["Can't auto-accept due to \'%s\' option"] = true
   L["Echo %s actions"] = true
   L["Print %s actions to your chatframe"] = true
   L["Blizzard Options"] = true

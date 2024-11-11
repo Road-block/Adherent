@@ -13,10 +13,10 @@ local T = LibStub("LibQTip-1.0")
 adherent._DEBUG = false
 local _,_,_,tocNum = GetBuildInfo()
 tocNum = tonumber(tocNum)
-adherent._wrath = tocNum < 40000 and tocNum > 30000 -- temp until we get a wrath project id
+adherent._cata = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_CATACLYSM_CLASSIC) or false
 adherent._classic = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_CLASSIC) or false
-adherent._bcc = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC) or false
-adherent._bcc = adherent._bcc and not adherent._wrath -- temp until we get a wrath project id
+-- adherent._bcc = _G.WOW_PROJECT_ID and (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC) or false
+-- adherent._bcc = adherent._bcc and not adherent._wrath -- temp until we get a wrath project id
 adherent._playerName = GetUnitName("player")
 adherent._playerFullName = adherent._playerName
 
@@ -25,9 +25,11 @@ local out_chat = string.format("%s: %%s",addonName)
 local special_frames = {}
 local alreadyPinged, alreadyPonged, pongReceived = {}, {}, {}
 local InviteToGroup = _G.InviteToGroup or C_PartyInfo.InviteUnit
+local RequestInviteFromUnit = _G.RequestInviteFromUnit or C_PartyInfo.RequestInviteFromUnit
 local CanGroupInvite = _G.CanGroupInvite or C_PartyInfo.CanInvite
 local ConvertToRaid = _G.ConvertToRaid or C_PartyInfo.ConvertToRaid
 local GuildRoster = _G.GuildRoster or C_GuildInfo.GuildRoster
+local GetAddOnMetadata = _G.GetAddOnMetadata or C_AddOns.GetAddOnMetadata
 local COMM_PREFIX = format("%s_PFX",addonName)
 
 local default_keywords = {
@@ -1194,11 +1196,6 @@ function adherent:deferredInit(guildname)
 end
 
 function adherent:showOptions()
-  --[[InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
-  self:ScheduleTimer("ScrollToCategory",1,addonName,1)
-  self:ScheduleTimer(function()
-    InterfaceOptionsFrame_OpenToCategory(adherent.blizzoptions)
-  end,1)]]
   if ACD.OpenFrames[addonName] then
     ACD:Close(addonName)
   else
@@ -1325,7 +1322,7 @@ function adherent:inform(name, msg, action, ...)
   if msg and action then
     msg = format(msg,action,...)
   end
-  if not msg and action then
+  if (not msg) and action then
     -- construct msg from action
   end
   if msg and #msg > 0 then
@@ -1339,7 +1336,7 @@ function adherent:echo(msg, action, ...)
   if msg and action then
     msg = format(msg,action,...)
   end
-  if not msg and action then
+  if (not msg) and action then
     -- construct msg from action
   end
   if msg and #msg > 0 then
@@ -1359,21 +1356,21 @@ function adherent:followstop(name)
     adherent._lastLeader = nil
     self:echo(L["Request to stop following by %s"],name)
   else
-    self:inform(name,L["Can't comply due to \'%s\' option"],L["Starter only"])
+    self:inform(name,L["Can't auto-accept due to \'%s\' option"],L["Starter only"])
   end
 end
 
 local function takeAction(action, name)
   if adherent.db.char.notcombat and adherent:combat() then
-    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not in Combat"])
+    adherent:inform(name,L["Can't auto-accept due to \'%s\' option"],L["Not in Combat"])
     return
   end
   if adherent.db.char.notinstance and adherent:instance() then
-    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not in Instances"])
+    adherent:inform(name,L["Can't auto-accept due to \'%s\' option"],L["Not in Instances"])
     return
   end
   if adherent.db.char.notbusy and adherent:busy() then
-    adherent:inform(name,L["Can't comply due to \'%s\' option"],L["Not when busy"])
+    adherent:inform(name,L["Can't auto-accept due to \'%s\' option"],L["Not when busy"])
     return
   end
   if action == "follow" then
@@ -1604,7 +1601,7 @@ end
 
 local function acceptGroup(reason, sender)
   if adherent.db.char.notbusy and adherent:busy() then
-    adherent:inform(sender,L["Can't comply due to \'%s\' option"],L["Not when busy"])
+    adherent:inform(sender,L["Can't auto-accept due to \'%s\' option"],L["Not when busy"])
     return
   end
   AcceptGroup()
@@ -1966,25 +1963,6 @@ function adherent:Capitalize(word)
   return (string.gsub(word,"^[%c%s]*([^%c%s%p%d])([^%c%s%p%d]*)",function(head,tail)
     return string.format("%s%s",string.upper(head),string.lower(tail))
     end))
-end
-
-function adherent:ScrollToCategory(panelName,offset)
-    local idx = 0
-    offset = offset or 0
-    InterfaceOptionsFrameAddOnsListScrollBar:SetValue(0)
-    for i,cat in ipairs(INTERFACEOPTIONS_ADDONCATEGORIES) do
-        if not cat.hidden then
-            idx = idx + 1
-            if cat.name == panelName then
-                break
-            end
-        end
-    end
-    local numbuttons = #(InterfaceOptionsFrameAddOns.buttons)
-    if idx and numbuttons and idx > numbuttons then
-        local btnHeight = InterfaceOptionsFrameAddOns.buttons[1]:GetHeight()
-        InterfaceOptionsFrameAddOnsListScrollBar:SetValue((offset+idx-numbuttons)*btnHeight)
-    end
 end
 
 function adherent:getServerTime(date_fmt, time_fmt, epoch)
