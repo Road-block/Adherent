@@ -1,4 +1,4 @@
-## Interface: 40402
+## Interface: 50500
 ## Author: Roadblock
 ## Title: Adherent
 ## Notes: Adherent lets you define rules for auto accepting follow, group join and group invite requests.
